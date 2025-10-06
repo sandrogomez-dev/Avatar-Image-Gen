@@ -1,7 +1,8 @@
 //importar dependencias
 import express from "express";
 import dotenv from "dotenv";
-import OpenAI from "openai";
+// import OpenAI from "openai";
+import axios from "axios";
 
 // cargar configuracion(apikey, port)
 dotenv.config();
@@ -10,7 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 // servir frontend
-app.use("/front", express.static("public"));
+app.use("/", express.static("public"));
 
 app.get("/api", (req, res) => {
   res.json({ message: "¡Funciona!" });
@@ -20,41 +21,33 @@ app.get("/api", (req, res) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-//instancia de openai y pasar el api key
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Ruta para generar imagenes con IA
+app.post("/api/gen-img"),
+  async (req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
 
-//ruta /  endpoint / url
-app.post("/api/traducir", async (req, res) => {
-  const { text, targetLang } = req.body;
+    const { category } = req.body;
 
-  const promptSystem1 = `Eres un traductor experto.`;
-  const promptSystem2 =
-    `Solo puedes responder con una traduccion directa del texto que el usuario te envie.` +                                                                     
-    " Cualquier otra respuesta o conversacion, esta prohibida.";
-  const promptUser = `Traduce el siguiente texto al idioma ${targetLang}:\n\n${text}\n\nTraducción:`;                                                          
-  //funcionalidad de traducir con IA
-  // LLamar al LLM o modelo de openai
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: promptSystem1 + "\n" + promptSystem2 },      
-        { role: "user", content: promptUser },
-      ],
-      max_tokens: 500,
-      response_format: { type: "text" },
-    });
-
-    const translatedText = completion.choices[0].message.content;
-
-    return res.status(200).json({ translatedText });
-  } catch (error) {
-    console.log("Error al traducir:", error);
-    return res.status(500).json({ error: "Error al traducir" });
-  }
-});
+    let prompt = `
+    Eres un diseñador gráfico experto en crear imágenes de alta calidad.
+    Tu objetivo final es crear un avatar para un usuario.
+    Especificaciones del avatar:
+    -Estilo: Cartoon
+    -Dimensiones: 256x256 píxeles
+    -Fondo de la imagen: Color solido
+    -Protagonista del avatar: ${category}
+    -El avatar debe ser visualmente atractivo y profesional.
+    -El avatar debe ser adecuado para su uso en perfiles de redes sociales y plataformas en línea.
+    -El avatar debe transmitir la personalidad y el estilo del usuario.
+    -El avatar debe ser único y original, evitando cualquier similitud con imágenes existentes.
+    -El avatar debe ser entregado en formato PNG con fondo transparente.
+    -El avatar debe ser creado utilizando herramientas y técnicas de diseño gráfico avanzadas.
+    para hacer bien el trabajo debemos cumplir con todas las especificaciones dadas.
+    -No incluir texto en la imagen.
+    -No incluir marcas de agua en la imagen.
+    recuerda que en la imagen debe aparecer un ${category}
+    `;
+  };
 
 // Servir el backend
 app.listen(PORT, () => {
