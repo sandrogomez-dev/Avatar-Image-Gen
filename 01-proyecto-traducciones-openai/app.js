@@ -22,20 +22,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Ruta para generar imagenes con IA
-app.post("/api/gen-img"),
-  async (req, res) => {
-    const apiKey = process.env.OPENAI_API_KEY;
+app.post("/api/gen-img", async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
 
-    const { category } = req.body;
+  const { category } = req.body;
 
-    let prompt = `
+  let prompt = `
     Eres un diseñador gráfico experto en crear imágenes de alta calidad.
-    Tu objetivo final es crear un avatar para un usuario.
+    Tu objetivo final es crear un avatar para un ${category} siguiendo las especificaciones detalladas a continuación.
     Especificaciones del avatar:
     -Estilo: Cartoon
     -Dimensiones: 256x256 píxeles
     -Fondo de la imagen: Color solido
     -Protagonista del avatar: ${category}
+    -El formato de la imagen sera cuadrado o rectangular.
+
     -El avatar debe ser visualmente atractivo y profesional.
     -El avatar debe ser adecuado para su uso en perfiles de redes sociales y plataformas en línea.
     -El avatar debe transmitir la personalidad y el estilo del usuario.
@@ -45,9 +46,30 @@ app.post("/api/gen-img"),
     para hacer bien el trabajo debemos cumplir con todas las especificaciones dadas.
     -No incluir texto en la imagen.
     -No incluir marcas de agua en la imagen.
-    recuerda que en la imagen debe aparecer un ${category}
     `;
-  };
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/images/generations",
+      {
+        model: "dall-e-2",
+        prompt: prompt,
+        n: 1,
+        size: "256x256",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+    const imageUrl = response.data.data[0].url;
+    res.json({ imageUrl: imageUrl });
+  } catch (error) {
+    console.log("Error al generar la imagen:", error);
+    res.status(500).json({ error: "Error al generar la imagen" });
+  }
+});
 
 // Servir el backend
 app.listen(PORT, () => {
